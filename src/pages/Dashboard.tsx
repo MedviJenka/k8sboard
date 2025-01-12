@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from 'react-query';
 import axios from 'axios';
-import { Activity, Server, Box } from 'lucide-react';
+import { Boxes, Server, Box, Blocks } from 'lucide-react';
 import type { Pod, Node, Deployment } from '../types/kubernetes';
 
-
 function Dashboard() {
+
+  const [logs, setLogs] = useState<string[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+
   const { data: pods, error: podsError } = useQuery<Pod[]>(
     'pods',
     async () => {
@@ -13,7 +16,6 @@ function Dashboard() {
         const response = await axios.get('http://localhost:5000/api/pods');
         return response.data.items;
       } catch (error) {
-        // Return empty array instead of throwing
         return [];
       }
     },
@@ -27,7 +29,6 @@ function Dashboard() {
         const response = await axios.get('http://localhost:5000/api/nodes');
         return response.data.items;
       } catch (error) {
-        // Return empty array instead of throwing
         return [];
       }
     },
@@ -41,7 +42,6 @@ function Dashboard() {
         const response = await axios.get('http://localhost:5000/api/deployments');
         return response.data.items;
       } catch (error) {
-        // Return empty array instead of throwing
         return [];
       }
     },
@@ -49,6 +49,19 @@ function Dashboard() {
   );
 
   const hasError = podsError || nodesError || deploymentsError;
+
+  const handleFetchLogs = async () => {
+    setLoadingLogs(true);
+    try {
+      const response = await axios.get('http://localhost:5000/api/logs');
+      setLogs(response.data.logs || []);
+    } catch (error) {
+      console.error('Failed to fetch logs:', error);
+      setLogs(['Failed to fetch logs']);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
 
   if (hasError) {
     return (
@@ -63,8 +76,8 @@ function Dashboard() {
   const stats = [
     {
       title: 'Running Pods',
-      value: pods?.filter(pod => pod.status.phase === 'Running').length || 0,
-      icon: Activity,
+      value: pods?.filter((pod) => pod.status.phase === 'Running').length || 0,
+      icon: Blocks,
       color: 'text-green-600',
     },
     {
@@ -84,7 +97,7 @@ function Dashboard() {
   return (
     <div>
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Cluster Overview</h1>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {stats.map((stat) => (
           <div key={stat.title} className="bg-white rounded-lg shadow p-6">
@@ -101,8 +114,23 @@ function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Recent Events</h2>
-          {/* Add events list here */}
+          <h2
+            className="text-xl font-semibold mb-4 cursor-pointer text-blue-500 hover:underline"
+            onClick={handleFetchLogs}
+          >
+            Recent Events
+          </h2>
+          {loadingLogs ? (
+            <p>Loading logs...</p>
+          ) : (
+            <ul className="list-disc pl-6">
+              {logs.map((log, index) => (
+                <li key={index} className="text-sm text-gray-700">
+                  {log}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Resource Usage</h2>

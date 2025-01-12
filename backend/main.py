@@ -1,4 +1,5 @@
-from flask import Flask, jsonify
+import subprocess
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from kubernetes import client, config
 
@@ -19,9 +20,51 @@ core_v1 = client.CoreV1Api()
 apps_v1 = client.AppsV1Api()
 
 
+@app.route('/api/admin/minikube/run', methods=['GET', 'POST'])
+def start_minikube() -> jsonify:
+    try:
+        # Run the minikube start command
+        process = subprocess.run(
+            ['minikube', 'start'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True
+        )
+        return jsonify({"message": "Minikube started successfully", "output": process.stdout}), 200
+    except subprocess.CalledProcessError as e:
+        return jsonify({"error": "Failed to start Minikube", "details": e.stderr}), 500
+
+
 @app.route('/api/health')
 def health_check() -> dict:
     return {'service': 'healthy'}
+
+
+@app.route('/api/logs', methods=['GET'])
+def get_logs():
+    """
+    Retrieves logs for a specified pod in a namespace.
+    Query Parameters:
+    - namespace: The namespace of the pod (default: "default").
+    - pod_name: The name of the pod.
+    """
+    namespace = request.args.get('namespace', 'default')  # Default namespace is "default"
+    pod_name = request.args.get('pod_name')  # Pod name must be provided
+
+    if not pod_name:
+        return jsonify({"error": "pod_name query parameter is required"}), 400
+
+    try:
+        # Retrieve logs for the specified pod
+        logs = core_v1.read_namespaced_pod_log(
+            name=pod_name,
+            namespace=namespace,
+            pretty=True
+        )
+        return jsonify({"logs": logs.splitlines()})
+    except client.exceptions.ApiException as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/pods', methods=['GET'])

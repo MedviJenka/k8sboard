@@ -5,7 +5,7 @@ import type { Deployment } from '../types/kubernetes';
 
 function Deployments() {
   const { data: deployments, isLoading } = useQuery<Deployment[]>('deployments', async () => {
-    const response = await axios.get('http://localhost:3001/api/deployments');
+    const response = await axios.get('http://localhost:5000/api/deployments');
     return response.data.items;
   });
 

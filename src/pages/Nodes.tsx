@@ -5,7 +5,7 @@ import type { Node } from '../types/kubernetes';
 
 function Nodes() {
   const { data: nodes, isLoading } = useQuery<Node[]>('nodes', async () => {
-    const response = await axios.get('http://localhost:3001/api/nodes');
+    const response = await axios.get('http://localhost:5000/api/nodes');
     return response.data.items;
   });
 

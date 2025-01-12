@@ -10,35 +10,35 @@ function Dashboard() {
     'pods',
     async () => {
       try {
-        const response = await axios.get('http://localhost:3001/api/pods');
+        const response = await axios.get('http://localhost:5000/api/pods');
         return response.data.items;
       } catch (error) {
         // Return empty array instead of throwing
         return [];
       }
     },
-    { retry: false }
+    { retry: true }
   );
 
   const { data: nodes, error: nodesError } = useQuery<Node[]>(
     'nodes',
     async () => {
       try {
-        const response = await axios.get('http://localhost:3001/api/nodes');
+        const response = await axios.get('http://localhost:5000/api/nodes');
         return response.data.items;
       } catch (error) {
         // Return empty array instead of throwing
         return [];
       }
     },
-    { retry: false }
+    { retry: true }
   );
 
   const { data: deployments, error: deploymentsError } = useQuery<Deployment[]>(
     'deployments',
     async () => {
       try {
-        const response = await axios.get('http://localhost:3001/api/deployments');
+        const response = await axios.get('http://localhost:5000/api/deployments');
         return response.data.items;
       } catch (error) {
         // Return empty array instead of throwing

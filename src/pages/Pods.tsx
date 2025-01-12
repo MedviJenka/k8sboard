@@ -5,7 +5,7 @@ import type { Pod } from '../types/kubernetes';
 
 function Pods() {
   const { data: pods, isLoading } = useQuery<Pod[]>('pods', async () => {
-    const response = await axios.get('http://localhost:3001/api/pods');
+    const response = await axios.get('http://localhost:5000/api/pods');
     return response.data.items;
   });
 

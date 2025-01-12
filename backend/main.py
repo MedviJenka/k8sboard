@@ -20,20 +20,48 @@ core_v1 = client.CoreV1Api()
 apps_v1 = client.AppsV1Api()
 
 
-@app.route('/api/admin/minikube/run', methods=['GET', 'POST'])
-def start_minikube() -> jsonify:
+def start_minikube():
+    """Starts Minikube and reloads the Kubernetes configuration."""
     try:
-        # Run the minikube start command
-        process = subprocess.run(
-            ['minikube', 'start'],
+        # Check if Minikube is already running
+        status_process = subprocess.run(
+            ['minikube', 'status'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        if 'host: Running' in status_process.stdout and 'kubelet: Running' in status_process.stdout:
+            return {"message": "Minikube is already running", "status": "running"}
+
+        # Start Minikube
+        start_process = subprocess.run(
+            ['minikube', 'start', '--wait=all'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
             check=True
         )
-        return jsonify({"message": "Minikube started successfully", "output": process.stdout}), 200
+
+        # Reload Kubernetes configuration
+        config.load_kube_config()
+
+        return {
+            "message": "Minikube started successfully",
+            "output": start_process.stdout,
+            "status": "started"
+        }
+
     except subprocess.CalledProcessError as e:
-        return jsonify({"error": "Failed to start Minikube", "details": e.stderr}), 500
+        return {"message": "Failed to start Minikube", "details": e.stderr, "status": "error"}
+    except Exception as e:
+        return {"message": str(e), "status": "error"}
+
+
+@app.route('/api/admin/minikube/run', methods=['POST'])
+def run_minikube():
+    """API endpoint to start Minikube."""
+    result = start_minikube()
+    return jsonify(result)
 
 
 @app.route('/api/health')
@@ -102,9 +130,7 @@ def list_nodes():
         result = {
             "items": [
                 {
-                    "metadata": {
-                        "name": node.metadata.name
-                    },
+                    "metadata": {"name": node.metadata.name},
                     "status": {
                         "conditions": [
                             {"type": c.type, "status": c.status}
@@ -112,9 +138,10 @@ def list_nodes():
                         ],
                         "capacity": {
                             "cpu": node.status.capacity.get("cpu", "N/A"),
-                            "memory": node.status.capacity.get("memory", "N/A")
-                        }
-                    }
+                            "memory": node.status.capacity.get("memory", "N/A"),
+                        },
+                        "phase": node.status.phase if hasattr(node.status, "phase") else "Unknown",
+                    },
                 }
                 for node in nodes.items
             ]

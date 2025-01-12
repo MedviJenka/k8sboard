@@ -6,9 +6,9 @@ from kubernetes import client, config
 app = Flask(__name__)
 
 # Configure CORS
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Load Kubernetes configuration
+
 try:
     config.load_kube_config()
 except config.config_exception.ConfigException:
@@ -17,6 +17,11 @@ except config.config_exception.ConfigException:
 # Initialize Kubernetes clients
 core_v1 = client.CoreV1Api()
 apps_v1 = client.AppsV1Api()
+
+
+@app.route('/api/health')
+def health_check() -> dict:
+    return {'service': 'healthy'}
 
 
 @app.route('/api/pods', methods=['GET'])

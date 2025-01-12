@@ -9,6 +9,7 @@ import Deployments from './pages/Deployments';
 
 const queryClient = new QueryClient();
 
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -30,3 +31,4 @@ function App() {
 }
 
 export default App;
+

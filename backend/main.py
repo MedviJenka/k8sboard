@@ -1,14 +1,13 @@
-import subprocess
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from kubernetes import client, config
+from backend.ai import Agent
+from backend.minikube import start_minikube
 
 
 app = Flask(__name__)
-
-# Configure CORS
 CORS(app, resources={r"/*": {"origins": "*"}})
-
+agent = Agent()
 
 try:
     config.load_kube_config()
@@ -20,45 +19,8 @@ core_v1 = client.CoreV1Api()
 apps_v1 = client.AppsV1Api()
 
 
-def start_minikube():
-    """Starts Minikube and reloads the Kubernetes configuration."""
-    try:
-        # Check if Minikube is already running
-        status_process = subprocess.run(
-            ['minikube', 'status'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        if 'host: Running' in status_process.stdout and 'kubelet: Running' in status_process.stdout:
-            return {"message": "Minikube is already running", "status": "running"}
-
-        # Start Minikube
-        start_process = subprocess.run(
-            ['minikube', 'start', '--wait=all'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True
-        )
-
-        # Reload Kubernetes configuration
-        config.load_kube_config()
-
-        return {
-            "message": "Minikube started successfully",
-            "output": start_process.stdout,
-            "status": "started"
-        }
-
-    except subprocess.CalledProcessError as e:
-        return {"message": "Failed to start Minikube", "details": e.stderr, "status": "error"}
-    except Exception as e:
-        return {"message": str(e), "status": "error"}
-
-
 @app.route('/api/admin/minikube/run', methods=['POST'])
-def run_minikube():
+def run_minikube() -> jsonify:
     """API endpoint to start Minikube."""
     result = start_minikube()
     return jsonify(result)
@@ -70,7 +32,7 @@ def health_check() -> dict:
 
 
 @app.route('/api/logs', methods=['GET'])
-def get_logs():
+def get_logs() -> jsonify:
     """
     Retrieves logs for a specified pod in a namespace.
     Query Parameters:
@@ -152,7 +114,7 @@ def list_nodes():
 
 
 @app.route('/api/deployments', methods=['GET'])
-def list_deployments():
+def list_deployments() -> jsonify:
     try:
         deployments = apps_v1.list_deployment_for_all_namespaces()
         result = {
@@ -176,6 +138,19 @@ def list_deployments():
         return jsonify(result)
     except Exception as e:
         return jsonify({"items": [], "error": str(e)})
+
+
+@app.route(rule='/api/ai-service', methods=['GET'])
+def ai_service() -> tuple:
+
+    """Endpoint to roast the user."""
+
+    try:
+        response = agent.set_ai(user_input=list_pods())
+        return jsonify({"ai-service": response}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == '__main__':

@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Pods from './pages/Pods';
 import Nodes from './pages/Nodes';
 import Deployments from './pages/Deployments';
+import AIService from './pages/AIService';
 
 const queryClient = new QueryClient();
 
@@ -21,7 +22,8 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/pods" element={<Pods />} />
               <Route path="/nodes" element={<Nodes />} />
-              <Route path="/deployments" element={<Deployments />} />
+              <Route path="/deployments" element={<Deployments />}/>
+              <Route path="/ai" element={<AIService />}/>
             </Routes>
           </main>
         </div>
